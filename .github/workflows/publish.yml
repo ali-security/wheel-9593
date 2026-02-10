@@ -3,56 +3,56 @@ name: Publish packages to PyPI
 on:
   push:
     tags:
-      - "[0-9]+.[0-9]+.[0-9]+"
-      - "[0-9]+.[0-9]+.[0-9]+.post[0-9]+"
-      - "[0-9]+.[0-9]+.[0-9]+[a-b][0-9]+"
-      - "[0-9]+.[0-9]+.[0-9]+rc[0-9]+"
+      - '[0-9]+.[0-9]+.[0-9]+'
+      - '[0-9]+.[0-9]+.[0-9]+.post[0-9]+'
+      - '[0-9]+.[0-9]+.[0-9]+[a-b][0-9]+'
+      - '[0-9]+.[0-9]+.[0-9]+rc[0-9]+'
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     environment: release
     steps:
-    - uses: actions/checkout@v4
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: 3.x
-    - name: Install dependencies
-      run: pip install flit
-    - name: Create packages
-      run: flit build --setup-py
-    - name: Store package artifacts
-      uses: actions/upload-artifact@v3
-      with:
-        name: dist
-        path: dist
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: MatteoH2O1999/setup-python@v4
+        with:
+          python-version: 3.x
+      - name: Install dependencies
+        run: pip install flit
+      - name: Create packages
+        run: flit build --setup-py
+      - name: Store package artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist
 
   publish:
     needs: build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     environment: release
     permissions:
       id-token: write
     steps:
-    - name: Retrieve package artifacts
-      uses: actions/download-artifact@v3
-    - name: Upload packages
-      uses: pypa/gh-action-pypi-publish@release/v1
+      - name: Retrieve package artifacts
+        uses: actions/download-artifact@v3
+      - name: Upload packages
+        uses: pypa/gh-action-pypi-publish@release/v1
 
   release:
     name: Create a GitHub release
     needs: build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     permissions:
       contents: write
     steps:
-    - uses: actions/checkout@v4
-    - id: changelog
-      uses: agronholm/release-notes@v1
-      with:
-        path: docs/news.rst
-        version_pattern: "^\\*\\*([0-9a-z.]+) "
-    - uses: ncipollo/release-action@v1
-      with:
-        body: ${{ steps.changelog.outputs.changelog }}
+      - uses: actions/checkout@v4
+      - id: changelog
+        uses: agronholm/release-notes@v1
+        with:
+          path: docs/news.rst
+          version_pattern: '^\*\*([0-9a-z.]+) '
+      - uses: ncipollo/release-action@v1
+        with:
+          body: ${{ steps.changelog.outputs.changelog }}
