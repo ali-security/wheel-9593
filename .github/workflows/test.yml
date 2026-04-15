@@ -36,10 +36,6 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
         allow-prereleases: true
-    - uses: actions/cache@v3
-      with:
-        path: ~/.cache/pip
-        key: pip-test-${{ matrix.python-version }}-${{ matrix.os }}
     - name: Install the project
       run: pip install --no-binary=wheel .
     - name: Install test dependencies
