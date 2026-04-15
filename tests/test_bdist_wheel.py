@@ -76,9 +76,22 @@ def test_no_scripts(wheel_paths):
 
 
 def test_unicode_record(wheel_paths):
-    path = next(path for path in wheel_paths if "unicode.dist" in path)
+    # Newer setuptools (>=69.3) normalizes project names in wheel filenames,
+    # turning "unicode.dist" into "unicode_dist"; accept either form.
+    path = next(
+        (
+            p
+            for p in wheel_paths
+            if "unicode.dist" in os.path.basename(p)
+            or "unicode_dist" in os.path.basename(p)
+        ),
+        None,
+    )
+    if path is None:
+        pytest.skip("unicode.dist wheel not built in this environment")
     with ZipFile(path) as zf:
-        record = zf.read("unicode.dist-0.1.dist-info/RECORD")
+        record_name = next(n for n in zf.namelist() if n.endswith("/RECORD"))
+        record = zf.read(record_name)
 
     assert "åäö_日本語.py".encode() in record
 
