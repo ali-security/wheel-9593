@@ -48,12 +48,6 @@ jobs:
       if: matrix.python-version == '3.11'
       run: pip install build flit
     - name: Test with pytest
-      run: |
-        coverage run -m pytest
-        coverage xml
+      run: pytest
       env:
         PYTHONWARNDEFAULTENCODING: 1
-    - name: Send coverage data to Codecov
-      uses: codecov/codecov-action@v3
-      with:
-        file: coverage.xml

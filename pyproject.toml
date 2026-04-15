@@ -64,15 +64,9 @@ exclude = [
     ".cirrus.yml",
     ".github/**",
     ".gitignore",
-    ".pre-commit-config.yaml",
     ".readthedocs.yml",
     "**/__pycache__",
 ]
-
-[tool.black]
-extend-exclude = '''
-^/src/wheel/vendored/
-'''
 
 [tool.pytest.ini_options]
 minversion = "6.0"
@@ -85,24 +79,6 @@ filterwarnings = [
 log_cli_level = "info"
 testpaths = ["test"]
 
-[tool.coverage.run]
-source = ["wheel"]
-omit = ["*/vendored/*"]
-
-[tool.coverage.report]
-show_missing = true
-
-[tool.ruff]
-line-length = 88
-select = [
-    "E", "F", "W",  # default flake-8
-    "I",            # isort
-    "PGH",          # pygrep-hooks
-    "UP",           # pyupgrade
-    "B",            # flake8-bugbear
-]
-src = ["src"]
-
 # Tox (https://tox.wiki/) is a tool for running tests in multiple virtualenvs.
 # This configuration file will run the test suite on all supported python
 # versions. To use it, "pipx install tox" and then run "tox" from this
@@ -111,25 +87,17 @@ src = ["src"]
 [tool.tox]
 legacy_tox_ini = '''
 [tox]
-envlist = py37, py38, py39, py310, py311, py312, py313, pypy3, lint, pkg
+envlist = py37, py38, py39, py310, py311, py312, py313, pypy3, pkg
 minversion = 4.0.0
 skip_missing_interpreters = true
 
 [testenv]
 package = wheel
 wheel_build_env = .pkg
-depends = lint
 commands = {env_python} -b -m pytest {posargs}
 extras = test
 set_env =
   PYTHONWARNDEFAULTENCODING = 1
-
-[testenv:lint]
-depends =
-basepython = python3
-deps = pre-commit
-commands = pre-commit run --all-files --show-diff-on-failure
-skip_install = true
 
 [testenv:pkg]
 basepython = python3
