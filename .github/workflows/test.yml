@@ -19,8 +19,9 @@ jobs:
         - os: ubuntu-latest
           python-version: "3.7"
           container: "python:3.7"
-        - os: macos-13
+        - os: macos-latest
           python-version: "3.7"
+          pyenv-version: "3.7.17"
         - os: windows-latest
           python-version: "3.7"
         - os: macos-latest
@@ -36,11 +37,25 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - name: Set up Python ${{ matrix.python-version }}
-      if: matrix.container == ''
+      if: matrix.container == '' && matrix.pyenv-version == ''
       uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
         allow-prereleases: true
+    - name: Install Python ${{ matrix.pyenv-version }} via pyenv (macOS)
+      if: matrix.pyenv-version != ''
+      run: |
+        # Python 3.7 has no prebuilt binaries for macOS arm64 (it predates
+        # Apple Silicon), so build it from source via pyenv. pyenv is
+        # preinstalled on the GitHub-hosted macOS runner image.
+        brew install openssl@1.1 readline sqlite3 xz zlib
+        export LDFLAGS="-L$(brew --prefix openssl@1.1)/lib -L$(brew --prefix readline)/lib -L$(brew --prefix zlib)/lib"
+        export CPPFLAGS="-I$(brew --prefix openssl@1.1)/include -I$(brew --prefix readline)/include -I$(brew --prefix zlib)/include"
+        export PKG_CONFIG_PATH="$(brew --prefix openssl@1.1)/lib/pkgconfig:$(brew --prefix readline)/lib/pkgconfig:$(brew --prefix zlib)/lib/pkgconfig"
+        pyenv install --skip-existing "${{ matrix.pyenv-version }}"
+        PYENV_PREFIX="$(pyenv root)/versions/${{ matrix.pyenv-version }}"
+        echo "$PYENV_PREFIX/bin" >> "$GITHUB_PATH"
+        "$PYENV_PREFIX/bin/python" -m pip install --upgrade pip
     - name: Install the project
       run: pip install --no-binary=wheel .
     - name: Install test dependencies

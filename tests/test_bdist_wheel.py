@@ -45,6 +45,21 @@ OTHER_IGNORED_FILES = {
     "LICENSE~",
     "AUTHORS~",
 }
+
+
+def _license_prefix(namelist, dist_info):
+    """Return the dist-info subdirectory setuptools used for license files.
+
+    Setuptools >=77 implements PEP 639 and places license files under
+    ``<dist-info>/licenses/``; older versions place them directly in
+    ``<dist-info>/``.
+    """
+    licenses_prefix = f"{dist_info}/licenses/"
+    if any(n.startswith(licenses_prefix) for n in namelist):
+        return licenses_prefix
+    return f"{dist_info}/"
+
+
 SETUPPY_EXAMPLE = """\
 from setuptools import setup
 
@@ -141,10 +156,10 @@ def test_licenses_default(dummy_dist, monkeypatch, tmp_path):
         [sys.executable, "setup.py", "bdist_wheel", "-b", str(tmp_path), "--universal"]
     )
     with WheelFile("dist/dummy_dist-1.0-py2.py3-none-any.whl") as wf:
-        license_files = {
-            "dummy_dist-1.0.dist-info/" + fname for fname in DEFAULT_LICENSE_FILES
-        }
-        assert set(wf.namelist()) == DEFAULT_FILES | license_files
+        names = set(wf.namelist())
+        prefix = _license_prefix(names, "dummy_dist-1.0.dist-info")
+        license_files = {prefix + fname for fname in DEFAULT_LICENSE_FILES}
+        assert names == DEFAULT_FILES | license_files
 
 
 def test_licenses_deprecated(dummy_dist, monkeypatch, tmp_path):
@@ -156,8 +171,10 @@ def test_licenses_deprecated(dummy_dist, monkeypatch, tmp_path):
         [sys.executable, "setup.py", "bdist_wheel", "-b", str(tmp_path), "--universal"]
     )
     with WheelFile("dist/dummy_dist-1.0-py2.py3-none-any.whl") as wf:
-        license_files = {"dummy_dist-1.0.dist-info/DUMMYFILE"}
-        assert set(wf.namelist()) == DEFAULT_FILES | license_files
+        names = set(wf.namelist())
+        prefix = _license_prefix(names, "dummy_dist-1.0.dist-info")
+        license_files = {prefix + "DUMMYFILE"}
+        assert names == DEFAULT_FILES | license_files
 
 
 @pytest.mark.parametrize(
@@ -180,10 +197,10 @@ def test_licenses_override(dummy_dist, monkeypatch, tmp_path, config_file, confi
         [sys.executable, "setup.py", "bdist_wheel", "-b", str(tmp_path), "--universal"]
     )
     with WheelFile("dist/dummy_dist-1.0-py2.py3-none-any.whl") as wf:
-        license_files = {
-            "dummy_dist-1.0.dist-info/" + fname for fname in {"DUMMYFILE", "LICENSE"}
-        }
-        assert set(wf.namelist()) == DEFAULT_FILES | license_files
+        names = set(wf.namelist())
+        prefix = _license_prefix(names, "dummy_dist-1.0.dist-info")
+        license_files = {prefix + fname for fname in {"DUMMYFILE", "LICENSE"}}
+        assert names == DEFAULT_FILES | license_files
 
 
 def test_licenses_disabled(dummy_dist, monkeypatch, tmp_path):
@@ -364,7 +381,7 @@ def test_rmtree_readonly(monkeypatch, tmp_path, capsys):
 
     if expected_count:
         captured = capsys.readouterr()
-        assert "file.txt" in captured.stdout
+        assert "file.txt" in captured.out
 
 
 def test_data_dir_with_tag_build(monkeypatch, tmp_path):
@@ -422,11 +439,16 @@ def test_data_dir_with_tag_build(monkeypatch, tmp_path):
         assert not_expected not in entries
 
 
+@pytest.mark.filterwarnings("ignore::RuntimeWarning")
 @pytest.mark.parametrize(
     "reported,expected",
     [("linux-x86_64", "linux_i686"), ("linux-aarch64", "linux_armv7l")],
 )
 def test_platform_linux32(reported, expected, monkeypatch):
+    # On Windows, sysconfig has no 'Py_DEBUG' config var, which causes
+    # get_abi_tag() to emit a RuntimeWarning that the strict filterwarnings
+    # config in pyproject.toml would otherwise escalate to an error. This
+    # test only cares about the platform tag, not the ABI tag.
     monkeypatch.setattr(struct, "calcsize", lambda x: 4)
     dist = setuptools.Distribution()
     cmd = bdist_wheel(dist)
